@@ -1,0 +1,52 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql" // Sesuaikan provider jika menggunakan database lain
+  url      = env("DATABASE_URL")
+}
+
+model Menu {
+  id          Int   @id @default(autoincrement())
+  created_at  DateTime @default(now()) @db.Timestamptz
+  name        String   @db.VarChar
+  price       Int
+  description String?  @db.Text
+  image       String?  @db.Text
+  promo       String?  @db.Text
+  type        String?  @db.Text
+
+  OrderDetail OrderDetail[]
+
+  @@map("menu")
+}
+
+model Order {
+  id          Int   @id @default(autoincrement())
+  code        Int
+  total       Int
+  created_at  DateTime @default(now()) @db.Timestamptz
+
+  OrderDetail OrderDetail[]
+  @@map("order")
+}
+
+model OrderDetail {
+  id         Int   @id @default(autoincrement())
+  created_at DateTime @default(now()) @db.Timestamptz
+  menu_id    Int   
+  quantity   Int      @db.SmallInt
+  order_id   Int   
+
+  Menu   Menu   @relation(fields: [menu_id], references: [id])
+  Order  Order  @relation(fields: [order_id], references: [id])
+
+  @@map("order_detail")
+}

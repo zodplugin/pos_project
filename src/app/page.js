@@ -1,53 +1,29 @@
 'use client'
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 
-const flashSaleItems = [
-  {
-    name: "Spicy Wings",
-    price: "40k IDR",
-    image: "/spicy-wings.jpg",
-    promo: "50% Off!",
-    description: "Crispy and spicy chicken wings, perfect for a snack.",
-  },
-  {
-    name: "BBQ Ribs",
-    price: "120k IDR",
-    image: "/bbq-ribs.jpg",
-    promo: "Limited Time Offer",
-    description: "Juicy and tender BBQ ribs with a smoky flavor.",
-  },
-];
-
-const menuItems = [
-  {
-    name: "Cheeseburger",
-    price: "50k IDR",
-    image: "/cheeseburger.jpg",
-    promo: "Buy 1 Get 1 Free!",
-    description: "A classic cheeseburger with melted cheese and fresh toppings.",
-  },
-  {
-    name: "Pizza Margherita",
-    price: "85k IDR",
-    image: "/pizza.jpg",
-    promo: "20% Off",
-    description: "Traditional Italian pizza with fresh tomatoes, mozzarella, and basil.",
-  },
-  {
-    name: "Pasta Carbonara",
-    price: "70k IDR",
-    image: "/pasta.jpg",
-    promo: "Free Drink Included",
-    description: "Creamy pasta with crispy pancetta and Parmesan cheese.",
-  },
-];
-
 export default function POS() {
+  const [menuItems, setmenuItems] = useState([]);
+  const [flashSaleItems, setflashSaleItems] = useState([])
+  const [cart, setCart] = useState([]);
+  const [wishlist, setWishlist] = useState([]);
   const [selectedItem, setSelectedItem] = useState(null);
+  const [showCartModal, setShowCartModal] = useState(false);
+  const [showWishlistModal, setShowWishlistModal] = useState(false);
   const [timeLeft, setTimeLeft] = useState(null);
+  useEffect(() => {
+    const fetchData = async () => {
+      const response = await fetch('/api/menu');
+      const data = await response.json();
+      const regularItems = data.filter(item => item.type === 'regular');
+      const flashSaleItems = data.filter(item => item.type === 'flash-sale');
+      setmenuItems(regularItems);
+      setflashSaleItems(flashSaleItems);
+    };
 
+    fetchData();
+  }, []);
   useEffect(() => {
     const endTime = new Date().getTime() + 3600000; // 1 hour from now
     const timer = setInterval(() => {
@@ -67,6 +43,80 @@ export default function POS() {
     return () => clearInterval(timer);
   }, []);
 
+  useEffect(() => {
+    const savedCart = JSON.parse(localStorage.getItem("cart")) || [];
+    const savedWishlist = JSON.parse(localStorage.getItem("wishlist")) || [];
+    setCart(savedCart);
+    setWishlist(savedWishlist);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("cart", JSON.stringify(cart));
+  }, [cart]);
+
+  useEffect(() => {
+    localStorage.setItem("wishlist", JSON.stringify(wishlist));
+  }, [wishlist]);
+
+  const formatCurrency = (price) => {
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      minimumFractionDigits: 0
+    }).format(price);
+  };
+
+  const addToCart = (item) => {
+    const existingItem = cart.find((cartItem) => cartItem.id === item.id);
+    if (existingItem) {
+      setCart(
+        cart.map((cartItem) =>
+          cartItem.id === item.id
+            ? { ...cartItem, quantity: cartItem.quantity + 1 }
+            : cartItem
+        )
+      );
+    } else {
+      setCart([...cart, { ...item, quantity: 1 }]);
+    }
+  };
+
+  const uncart = (id) => {
+    const existingItem = cart.find((cartItem) => cartItem.id === id);
+    if (existingItem.quantity > 1) {
+      setCart(
+        cart.map((cartItem) =>
+          cartItem.id === id
+            ? { ...cartItem, quantity: cartItem.quantity - 1 }
+            : cartItem
+        )
+      );
+    } else {
+      removeFromCart(id);
+    }
+  };
+
+  const removeFromCart = (id) => {
+    setCart(cart.filter((cartItem) => cartItem.id !== id));
+  };
+
+  const addToWishlist = (item) => {
+    if (!wishlist.some((wishlistItem) => wishlistItem.id === item.id)) {
+      setWishlist([...wishlist, item]);
+    }
+  };
+
+  const unwishlist = (id) => {
+    setWishlist(wishlist.filter((wishlistItem) => wishlistItem.id !== id));
+  };
+
+  const quantityCart = (id) => {
+    const item = cart.find((cartItem) => cartItem.id === id);
+    return item ? item.quantity : 0;
+  };
+  const isAddedToCart = (id) => cart.some((cartItem) => cartItem.id === id);
+  const isAddedToWishlist = (id) => wishlist.some((wishlistItem) => wishlistItem.id === id);
+
   const closeModal = () => setSelectedItem(null);
 
   return (
@@ -80,9 +130,9 @@ export default function POS() {
       <section className="mb-10 w-full max-w-5xl">
         <h2 className="text-2xl font-bold text-red-600 mb-4">Flash Sale! Ends in: {timeLeft}</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          {flashSaleItems.map((item, index) => (
+          {flashSaleItems.map((item) => (
             <div
-              key={index}
+              key={item.id}
               className="p-4 bg-yellow-50 rounded-lg shadow-lg transform transition-transform hover:scale-105 cursor-pointer"
               onClick={() => setSelectedItem(item)}
             >
@@ -99,16 +149,16 @@ export default function POS() {
                 </span>
               </div>
               <h2 className="text-xl font-semibold mb-2">{item.name}</h2>
-              <p className="text-lg font-medium">{item.price}</p>
+              <p className="text-lg font-medium">{formatCurrency(item.price)}</p>
             </div>
           ))}
         </div>
       </section>
 
       <main className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-5xl">
-        {menuItems.map((item, index) => (
+        {menuItems.map((item) => (
           <div
-            key={index}
+            key={item.id}
             className="p-4 bg-blue-50 rounded-lg shadow-lg transform transition-transform hover:scale-105 cursor-pointer"
             onClick={() => setSelectedItem(item)}
           >
@@ -125,7 +175,7 @@ export default function POS() {
               </span>
             </div>
             <h2 className="text-xl font-semibold mb-2">{item.name}</h2>
-            <p className="text-lg font-medium">{item.price}</p>
+            <p className="text-lg font-medium">{formatCurrency(item.price)}</p>
           </div>
         ))}
       </main>
@@ -139,9 +189,9 @@ export default function POS() {
           >
             <button
               className="absolute top-2 right-2 text-xl font-bold text-gray-500 hover:text-gray-800"
-              onClick={closeModal}
+                            onClick={closeModal}
             >
-              ×
+              &times;
             </button>
             <div className="mb-4">
               <Image
@@ -153,30 +203,131 @@ export default function POS() {
               />
             </div>
             <h2 className="text-2xl font-bold mb-2">{selectedItem.name}</h2>
-            <p className="text-sm text-gray-700 mb-4">{selectedItem.description}</p>
-            <p className="text-lg font-medium mb-4">{selectedItem.price}</p>
-            <div className="flex gap-4">
-              <button className="flex-1 bg-blue-500 text-white py-2 rounded hover:bg-blue-600">
-                Add to Cart
+            <p className="text-lg font-medium text-gray-700 mb-4">{formatCurrency(selectedItem.price)}</p>
+            <p className="text-sm text-gray-500 mb-4">{selectedItem.description}</p>
+            <p className="text-sm text-gray-500 mb-4">Quantity : {quantityCart(selectedItem.id)}</p>
+            <div className="flex justify-between items-center">
+              <button
+                className={`px-4 py-2 rounded-lg text-white ${
+                  isAddedToCart(selectedItem.id) ? "bg-green-500" : "bg-blue-500"
+                }`}
+                onClick={() => addToCart(selectedItem)}
+              >
+                {isAddedToCart(selectedItem.id) ? "Add More" : "Add to Cart"}
               </button>
-              <button className="flex-1 bg-gray-200 text-gray-700 py-2 rounded hover:bg-gray-300">
-                Add to Wishlist
+              {isAddedToCart(selectedItem.id) && (
+                <button
+                  className="px-4 py-2 rounded-lg bg-red-500 text-white"
+                  onClick={() => uncart(selectedItem.id)}
+                >
+                  Remove One
+                </button>
+              )}
+              <button
+                className={`px-4 py-2 rounded-lg text-white ${
+                  isAddedToWishlist(selectedItem.id) ? "bg-yellow-500" : "bg-gray-500"
+                }`}
+                onClick={() =>
+                  isAddedToWishlist(selectedItem.id)
+                    ? unwishlist(selectedItem.id)
+                    : addToWishlist(selectedItem)
+                }
+              >
+                {isAddedToWishlist(selectedItem.id) ? "Unwishlist" : "Wishlist"}
               </button>
             </div>
           </div>
         </div>
       )}
 
+      {/* Cart Modal */}
+      {showCartModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-11/12 sm:w-96 shadow-lg relative">
+            <button
+              className="absolute top-2 right-2 text-xl font-bold text-gray-500 hover:text-gray-800"
+              onClick={() => setShowCartModal(false)}
+            >
+              &times;
+            </button>
+            <h2 className="text-2xl font-bold mb-4">Your Cart</h2>
+            {cart.length === 0 ? (
+              <p className="text-gray-500">Your cart is empty.</p>
+            ) : (
+              cart.map((cartItem) => (
+                <div
+                  key={cartItem.id}
+                  className="flex justify-between items-center mb-4"
+                >
+                  <div>
+                    <p className="font-semibold">{cartItem.name}</p>
+                    <p className="text-sm text-gray-500">
+                      Quantity: {cartItem.quantity}
+                    </p>
+                  </div>
+                  <div className="flex space-x-2">
+                    <button
+                      className="px-2 py-1 bg-green-500 text-white rounded-lg"
+                      onClick={() => addToCart(cartItem)}
+                    >
+                      +
+                    </button>
+                    <button
+                      className="px-2 py-1 bg-red-500 text-white rounded-lg"
+                      onClick={() => uncart(cartItem.id)}
+                    >
+                      -
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Wishlist Modal */}
+      {showWishlistModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-11/12 sm:w-96 shadow-lg relative">
+            <button
+              className="absolute top-2 right-2 text-xl font-bold text-gray-500 hover:text-gray-800"
+              onClick={() => setShowWishlistModal(false)}
+            >
+              &times;
+            </button>
+            <h2 className="text-2xl font-bold mb-4">Your Wishlist</h2>
+            {wishlist.length === 0 ? (
+              <p className="text-gray-500">Your wishlist is empty.</p>
+            ) : (
+              wishlist.map((wishlistItem) => (
+                <div
+                  key={wishlistItem.id}
+                  className="flex justify-between items-center mb-4"
+                >
+                  <p className="font-semibold">{wishlistItem.name}</p>
+                  <button
+                    className="px-4 py-2 bg-red-500 text-white rounded-lg"
+                    onClick={() => unwishlist(wishlistItem.id)}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
       <footer className="mt-12 text-center text-sm text-blue-700">
         <p>Powered by Your Restaurant POS System</p>
       </footer>
 
       <nav className="fixed bottom-0 left-0 right-0 bg-blue-500 text-white flex justify-around items-center h-16">
-        <button className="flex flex-col items-center">
+        <button onClick={() => setShowCartModal(true)} className="flex flex-col items-center">
           <Image src="/cart.svg" alt="Cart" width={24} height={24} />
           <span className="text-xs">Cart</span>
         </button>
-        <button className="flex flex-col items-center">
+        <button onClick={() => setShowWishlistModal(true)} className="flex flex-col items-center">
           <Image src="/wishlist.svg" alt="Wishlist" width={24} height={24} />
           <span className="text-xs">Wishlist</span>
         </button>
@@ -188,3 +339,6 @@ export default function POS() {
     </div>
   );
 }
+
+
+      
