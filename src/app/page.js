@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
+import { FaShoppingCart, FaRegHeart, FaHistory } from 'react-icons/fa';
 
 export default function POS() {
   const [menuItems, setmenuItems] = useState([]);
@@ -12,6 +13,7 @@ export default function POS() {
   const [showCartModal, setShowCartModal] = useState(false);
   const [showWishlistModal, setShowWishlistModal] = useState(false);
   const [timeLeft, setTimeLeft] = useState(null);
+  const [disabled, setDisabled] = useState(false);
   useEffect(() => {
     const fetchData = async () => {
       const response = await fetch('/api/menu');
@@ -24,14 +26,23 @@ export default function POS() {
 
     fetchData();
   }, []);
+  
   useEffect(() => {
-    const endTime = new Date().getTime() + 3600000; // 1 hour from now
+    localStorage.setItem("cart", JSON.stringify(cart));
+  }, [cart]);
+
+  useEffect(() => {
+    const endTime = new Date().getTime() + 15000; // 1 hour from now
     const timer = setInterval(() => {
       const now = new Date().getTime();
       const distance = endTime - now;
 
       if (distance <= 0) {
         clearInterval(timer);
+        setDisabled(true)
+        let carts = JSON.parse(localStorage.getItem("cart"))
+        carts = carts.filter(item => item.type !== 'flash-sale'); 
+        setCart(carts)
         setTimeLeft("Sale Ended");
       } else {
         const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
@@ -50,9 +61,6 @@ export default function POS() {
     setWishlist(savedWishlist);
   }, []);
 
-  useEffect(() => {
-    localStorage.setItem("cart", JSON.stringify(cart));
-  }, [cart]);
 
   useEffect(() => {
     localStorage.setItem("wishlist", JSON.stringify(wishlist));
@@ -140,7 +148,7 @@ export default function POS() {
                 <Image
                   src={item.image}
                   alt={item.name}
-                  width={300}
+                  width={500}
                   height={200}
                   className="rounded-lg"
                 />
@@ -163,13 +171,14 @@ export default function POS() {
             onClick={() => setSelectedItem(item)}
           >
             <div className="relative mb-4">
-              <Image
-                src={item.image}
-                alt={item.name}
-                width={300}
-                height={200}
-                className="rounded-lg"
-              />
+            <Image
+              src={item.image}
+              alt={item.name}
+              width={300}
+              height={200} 
+              className="rounded-lg"
+              sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 33vw" // Menentukan ukuran berdasarkan lebar layar
+            />
               <span className="absolute top-2 right-2 bg-blue-500 text-white text-xs font-bold py-1 px-2 rounded">
                 {item.promo}
               </span>
@@ -324,15 +333,15 @@ export default function POS() {
 
       <nav className="fixed bottom-0 left-0 right-0 bg-blue-500 text-white flex justify-around items-center h-16">
         <button onClick={() => setShowCartModal(true)} className="flex flex-col items-center">
-          <Image src="/cart.svg" alt="Cart" width={24} height={24} />
+          <FaShoppingCart size={24} />
           <span className="text-xs">Cart</span>
         </button>
         <button onClick={() => setShowWishlistModal(true)} className="flex flex-col items-center">
-          <Image src="/wishlist.svg" alt="Wishlist" width={24} height={24} />
+          <FaRegHeart size={24} />
           <span className="text-xs">Wishlist</span>
         </button>
         <button className="flex flex-col items-center">
-          <Image src="/history.svg" alt="Order History" width={24} height={24} />
+          <FaHistory size={24} />
           <span className="text-xs">History</span>
         </button>
       </nav>
