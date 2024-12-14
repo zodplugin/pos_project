@@ -8,19 +8,29 @@ const prisma = new PrismaClient();
 export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const code = searchParams.get("code");
-    if (!code) return NextResponse.json({ error: "Order code is required" }, { status: 400 });
+    if (!code) {
+      return NextResponse.json({ error: "Order code is required" }, { status: 400 });
+    }
+  
+    // Konversi code ke integer
+    const parsedCode = parseInt(code, 10);
+    if (isNaN(parsedCode)) {
+      return NextResponse.json({ error: "Invalid order code format" }, { status: 400 });
+    }
   
     try {
-      const order = await prisma.order.findUnique({
-        where: { code: (code) },
+      const order = await prisma.order.findFirst({
+        where: { code: parsedCode }, 
         include: { OrderDetail: { include: { Menu: true } } },
       });
-      if (!order) return NextResponse.json({ error: "Order not found" }, { status: 404 });
+      if (!order) {
+        return NextResponse.json({ error: "Order not found" }, { status: 404 });
+      }
       return NextResponse.json(order, { status: 200 });
     } catch (error) {
-      return NextResponse.json({ error: "Failed to fetch order" }, { status: 500 });
+      return NextResponse.json({ error: `Failed to fetch order: ${error.message}` }, { status: 500 });
     }
-  }
+}
   
   // POST: Create a new order with details
   export async function POST(req: Request) {
@@ -48,6 +58,6 @@ export async function GET(req: Request) {
   
       return NextResponse.json(newOrder, { status: 201 });
     } catch (error) {
-      return NextResponse.json({ error: "Failed to create order" }, { status: 500 });
+      return NextResponse.json({ error: "Failed to create order "+error  }, { status: 500 });
     }
 }

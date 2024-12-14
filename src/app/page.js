@@ -2,7 +2,9 @@
 
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
-import { FaShoppingCart, FaRegHeart, FaHistory } from 'react-icons/fa';
+import { FaShoppingCart, FaListAlt , FaHistory } from 'react-icons/fa';
+import { toast } from 'react-hot-toast';
+import Link from 'next/link';
 
 export default function POS() {
   const [menuItems, setmenuItems] = useState([]);
@@ -32,7 +34,7 @@ export default function POS() {
   }, [cart]);
 
   useEffect(() => {
-    const endTime = new Date().getTime() + 15000; // 1 hour from now
+    const endTime = new Date().getTime() + 100000; // 1 hour from now
     const timer = setInterval(() => {
       const now = new Date().getTime();
       const distance = endTime - now;
@@ -126,6 +128,51 @@ export default function POS() {
   const isAddedToWishlist = (id) => wishlist.some((wishlistItem) => wishlistItem.id === id);
 
   const closeModal = () => setSelectedItem(null);
+  const totalCart = cart.reduce((acc, item) => {
+    return (item.price * item.quantity);
+  }, 0);
+  const order = async () => {
+    try {
+      let orderDetail = [];
+      cart.forEach((x) => {
+        orderDetail.push({
+          menuId: x.id,
+          quantity: x.quantity
+        })
+      }) 
+      
+      let code = Math.floor(Math.random() * 10 ** 10);
+      const response = await fetch('/api/order/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          code: code,
+          total: totalCart,
+          details: orderDetail,
+        }),
+      });
+      if (response.ok) {
+        const existingCodes = JSON.parse(sessionStorage.getItem('orderCodes')) || [];
+        if (!existingCodes.includes(code)) {
+          existingCodes.push(code); 
+        }
+        sessionStorage.setItem('orderCodes', JSON.stringify(existingCodes));
+
+        localStorage.removeItem('cart');
+        setCart([]);
+        setShowCartModal(false)
+        toast.success('Berhasil membuat order');
+      } else {
+        setShowCartModal(false)
+        toast.error('Eror ketika membuat order');
+      }
+    } catch (error) {
+      setShowCartModal(false)
+      toast.error('Eror ketika membuat order');
+    }
+  }
 
   return (
     <div className="bg-white min-h-screen text-blue-900 flex flex-col items-center p-6 sm:p-10">
@@ -133,7 +180,7 @@ export default function POS() {
         <h1 className="text-3xl font-bold">POS Menu</h1>
         <p className="text-lg mt-2">Explore our delicious menu and enjoy exclusive promos!</p>
       </header>
-
+      
       {/* Flash Sale Section */}
       <section className="mb-10 w-full max-w-5xl">
         <h2 className="text-2xl font-bold text-red-600 mb-4">Flash Sale! Ends in: {timeLeft}</h2>
@@ -177,7 +224,7 @@ export default function POS() {
               width={300}
               height={200} 
               className="rounded-lg"
-              sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 33vw" // Menentukan ukuran berdasarkan lebar layar
+              sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 33vw"
             />
               <span className="absolute top-2 right-2 bg-blue-500 text-white text-xs font-bold py-1 px-2 rounded">
                 {item.promo}
@@ -220,30 +267,18 @@ export default function POS() {
                 className={`px-4 py-2 rounded-lg text-white ${
                   isAddedToCart(selectedItem.id) ? "bg-green-500" : "bg-blue-500"
                 }`}
-                onClick={() => addToCart(selectedItem)}
+                onClick={() => addToCart(selectedItem)} disabled={disabled && selectedItem.type == 'flash-sale'}
               >
                 {isAddedToCart(selectedItem.id) ? "Add More" : "Add to Cart"}
               </button>
               {isAddedToCart(selectedItem.id) && (
                 <button
                   className="px-4 py-2 rounded-lg bg-red-500 text-white"
-                  onClick={() => uncart(selectedItem.id)}
+                  onClick={() => uncart(selectedItem.id)} disabled={disabled && selectedItem.type == 'flash-sale'}
                 >
                   Remove One
                 </button>
               )}
-              <button
-                className={`px-4 py-2 rounded-lg text-white ${
-                  isAddedToWishlist(selectedItem.id) ? "bg-yellow-500" : "bg-gray-500"
-                }`}
-                onClick={() =>
-                  isAddedToWishlist(selectedItem.id)
-                    ? unwishlist(selectedItem.id)
-                    : addToWishlist(selectedItem)
-                }
-              >
-                {isAddedToWishlist(selectedItem.id) ? "Unwishlist" : "Wishlist"}
-              </button>
             </div>
           </div>
         </div>
@@ -291,59 +326,38 @@ export default function POS() {
                 </div>
               ))
             )}
+            <p className="mb-2">Total Harga : {formatCurrency(totalCart)}</p>
+            <button
+              className=" px-4 py-2 font-bold bg-blue-500 rounded-lg text-white hover:text-gray-800"
+              onClick={() => order()}
+            >
+              Order Sekarang
+            </button>
           </div>
         </div>
       )}
 
-      {/* Wishlist Modal */}
-      {showWishlistModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-11/12 sm:w-96 shadow-lg relative">
-            <button
-              className="absolute top-2 right-2 text-xl font-bold text-gray-500 hover:text-gray-800"
-              onClick={() => setShowWishlistModal(false)}
-            >
-              &times;
-            </button>
-            <h2 className="text-2xl font-bold mb-4">Your Wishlist</h2>
-            {wishlist.length === 0 ? (
-              <p className="text-gray-500">Your wishlist is empty.</p>
-            ) : (
-              wishlist.map((wishlistItem) => (
-                <div
-                  key={wishlistItem.id}
-                  className="flex justify-between items-center mb-4"
-                >
-                  <p className="font-semibold">{wishlistItem.name}</p>
-                  <button
-                    className="px-4 py-2 bg-red-500 text-white rounded-lg"
-                    onClick={() => unwishlist(wishlistItem.id)}
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      )}
       <footer className="mt-12 text-center text-sm text-blue-700">
-        <p>Powered by Your Restaurant POS System</p>
+        <p>Powered by Warung Euy POS System</p>
       </footer>
 
       <nav className="fixed bottom-0 left-0 right-0 bg-blue-500 text-white flex justify-around items-center h-16">
+        <Link href="/">
+            <button className="flex flex-col items-center">
+            <FaListAlt size={24} />
+            <span className="text-xs">Menu</span>
+            </button>
+        </Link>
         <button onClick={() => setShowCartModal(true)} className="flex flex-col items-center">
-          <FaShoppingCart size={24} />
-          <span className="text-xs">Cart</span>
+        <FaShoppingCart size={24} />
+        <span className="text-xs">Cart</span>
         </button>
-        <button onClick={() => setShowWishlistModal(true)} className="flex flex-col items-center">
-          <FaRegHeart size={24} />
-          <span className="text-xs">Wishlist</span>
-        </button>
-        <button className="flex flex-col items-center">
-          <FaHistory size={24} />
-          <span className="text-xs">History</span>
-        </button>
+        <Link href="/order">
+            <button className="flex flex-col items-center">
+            <FaHistory size={24} />
+            <span className="text-xs">History</span>
+            </button>
+        </Link>
       </nav>
     </div>
   );
