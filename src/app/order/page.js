@@ -134,14 +134,22 @@ const History = () => {
                 </div>
 
                 <nav className="fixed bottom-0 left-0 right-0 bg-blue-500 text-white flex justify-around items-center h-16">
+                    <Link href="/">
+                        <button className="flex flex-col items-center">
+                        <FaListAlt size={24} />
+                        <span className="text-xs">Menu</span>
+                        </button>
+                    </Link>
                     <button onClick={() => setShowCartModal(true)} className="flex flex-col items-center">
                     <FaShoppingCart size={24} />
                     <span className="text-xs">Cart</span>
                     </button>
-                    <button className="flex flex-col items-center">
-                    <FaHistory size={24} />
-                    <span className="text-xs">History</span>
-                    </button>
+                    <Link href="/order">
+                        <button className="flex flex-col items-center">
+                        <FaHistory size={24} />
+                        <span className="text-xs">History</span>
+                        </button>
+                    </Link>
                 </nav>
             </div>
         </>
