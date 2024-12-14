@@ -265,7 +265,7 @@ export default function POS() {
             <div className="flex justify-between items-center">
               <button
                 className={`px-4 py-2 rounded-lg text-white ${
-                  isAddedToCart(selectedItem.id) ? "bg-green-500" : "bg-blue-500"
+                 disabled && selectedItem.type == 'flash-sale' ? "bg-gray-500" : (isAddedToCart(selectedItem.id) ? "bg-green-500" : "bg-blue-500")
                 }`}
                 onClick={() => addToCart(selectedItem)} disabled={disabled && selectedItem.type == 'flash-sale'}
               >
@@ -273,7 +273,7 @@ export default function POS() {
               </button>
               {isAddedToCart(selectedItem.id) && (
                 <button
-                  className="px-4 py-2 rounded-lg bg-red-500 text-white"
+                  className={`px-4 py-2 rounded-lg ${disabled && selectedItem.type == 'flash-sale' ? "bg-gray-500" : "bg-red-500"}  text-white`}
                   onClick={() => uncart(selectedItem.id)} disabled={disabled && selectedItem.type == 'flash-sale'}
                 >
                   Remove One
