@@ -122,17 +122,68 @@ const History = () => {
             <div className="bg-white min-h-screen text-blue-900 flex flex-col items-center p-6 sm:p-10">
                 <h1 className="text-xl font-bold mb-4 text-center">Order History</h1>
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                <div key={1} className="border rounded-lg shadow-lg p-4">
-                    <h2 className="text-lg font-semibold text-blue-700">
-                    Order Tidak Ada
-                    </h2>
-                    <p className="text-sm text-gray-500">Total: Rp 0</p>
-                    <div className="mt-2">
-                    <h3 className="text-md font-medium">Items: - </h3>
+                    <div key={1} className="border rounded-lg shadow-lg p-4">
+                        <h2 className="text-lg font-semibold text-blue-700">
+                        Order Tidak Ada
+                        </h2>
+                        <p className="text-sm text-gray-500">Total: Rp 0</p>
+                        <div className="mt-2">
+                        <h3 className="text-md font-medium">Items: - </h3>
+                        </div>
                     </div>
                 </div>
-                </div>
-
+                {/* Cart Modal */}
+                {showCartModal && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                        <div className="bg-white rounded-lg p-6 w-11/12 sm:w-96 shadow-lg relative">
+                            <button
+                            className="absolute top-2 right-2 text-xl font-bold text-gray-500 hover:text-gray-800"
+                            onClick={() => setShowCartModal(false)}
+                            >
+                            &times;
+                            </button>
+                            <h2 className="text-2xl font-bold mb-4">Your Cart</h2>
+                            {cart.length === 0 ? (
+                            <p className="text-gray-500">Your cart is empty.</p>
+                            ) : (
+                            cart.map((cartItem) => (
+                                <div
+                                key={cartItem.id}
+                                className="flex justify-between items-center mb-4"
+                                >
+                                <div>
+                                    <p className="font-semibold">{cartItem.name}</p>
+                                    <p className="text-sm text-gray-500">
+                                    Quantity: {cartItem.quantity}
+                                    </p>
+                                </div>
+                                <div className="flex space-x-2">
+                                    <button
+                                    className="px-2 py-1 bg-green-500 text-white rounded-lg"
+                                    onClick={() => addToCart(cartItem)}
+                                    >
+                                    +
+                                    </button>
+                                    <button
+                                    className="px-2 py-1 bg-red-500 text-white rounded-lg"
+                                    onClick={() => uncart(cartItem.id)}
+                                    >
+                                    -
+                                    </button>
+                                </div>
+                                </div>
+                            ))
+                            )}
+                            <p className="mb-2">Total Harga : {formatCurrency(totalCart)}</p>
+                            <button
+                            className=" px-4 py-2 font-bold bg-blue-500 rounded-lg text-white hover:text-gray-800"
+                            onClick={() => order()}
+                            >
+                            Order Sekarang
+                            </button>
+                        </div>
+                        </div>
+                    )}
                 <nav className="fixed bottom-0 left-0 right-0 bg-blue-500 text-white flex justify-around items-center h-16">
                     <Link href="/">
                         <button className="flex flex-col items-center">
